@@ -1,0 +1,11 @@
+# Data and local artifacts
+data/
+*.joblib
+*.csv
+*.txt
+
+# Python & Jupyter defaults
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv
