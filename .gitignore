@@ -1,8 +1,5 @@
 # Data and local artifacts
-data/
-*.joblib
-*.csv
-*.txt
+
 
 # Python & Jupyter defaults
 __pycache__/
