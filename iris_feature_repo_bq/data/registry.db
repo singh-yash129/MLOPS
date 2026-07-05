@@ -1,0 +1,37 @@
+
+ˆ
+h
+iris_id>Unique identifier for each individual iris plant being tracked"iris_idJiris_feature_repo_bq
+”š©Òèã”š©Òèã
+K
++
+__dummy"
+__dummy_idJiris_feature_repo_bq
+”š©Òˆî”š©Ò¨ø1"$0bedf3c5-5f17-4aee-a830-953aa544aa1c* š©Òà´À2ª
+õ
+iris_featuresiris_feature_repo_bqiris_id"
+sepal_length"
+sepal_width"
+petal_length"
+petal_width"
+species2€´¼:Òevent_timestamp*created_timestampb?
+=qwiklabs-gcp-04-e2161030bace.iris_feast_dataset.iris_featuresŠ9feast.infra.offline_stores.bigquery_source.BigQuerySource¢iris_bq_source’”š©Ò¸™3"”š©Ò ˜@b
+iris_id’latest0
+”š©ÒĞÑ« š©Ò€›–À
+€ÄÓÅ€ê†Ç0béevent_timestamp*created_timestampb?
+=qwiklabs-gcp-04-e2161030bace.iris_feast_dataset.iris_featuresŠ9feast.infra.offline_stores.bigquery_source.BigQuerySource¢iris_bq_sourceªiris_feature_repo_bq’”š©Ò¸™3"”š©Ò ˜Š4
+
+iris_feature_repo_bq
+”š©ÒÈ£÷3”š©ÒÈ£÷3’ƒ
+€
+iris_featuresiris_feature_repo_bq"feature_view*–
+õ
+iris_featuresiris_feature_repo_bqiris_id"
+sepal_length"
+sepal_width"
+petal_length"
+petal_width"
+species2€´¼:Òevent_timestamp*created_timestampb?
+=qwiklabs-gcp-04-e2161030bace.iris_feast_dataset.iris_featuresŠ9feast.infra.offline_stores.bigquery_source.BigQuerySource¢iris_bq_source’”š©Ò¸™3"”š©Ò ˜@b
+iris_id’latest
+”š©ÒĞÑ«”š©ÒĞÑ«2”š©Ò€£ßB$9ea9d829-989d-45b4-9079-ecc5c37b5f52
