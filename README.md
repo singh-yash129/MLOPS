@@ -12,49 +12,62 @@ columns. Source: `IITMBSMLOps/ga_resources` repo, branch `week_3`.
 
 ---
 
-## Contents
+## Repository Structure
 
-| File | Purpose |
-|---|---|
-| `Feast_IRIS_Assignment_Week3.ipynb` | Full walkthrough notebook — Tasks 1–6, runs end to end |
-| `feature_store.yaml` | Local/SQLite Feast config (Tasks 1–5) |
-| `iris_repo.py` | Entity, data source, feature view definitions (Tasks 1–2), local `FileSource` |
-| `train.py` | Task 4 — trains the classifier using Feast's **offline** store |
-| `inference.py` | Task 5 — simulates real-time inference using Feast's **online** store, compares against raw-CSV predictions |
-| `feature_store_bigquery.yaml` | Task 6 — Feast config with BigQuery as the offline store |
-| `iris_repo_bq.py` | Task 6 — same entity/feature view, `BigQuerySource` instead of `FileSource` |
-| `load_to_bigquery.py` | Task 6 — one-off script to load the CSV into a BigQuery table |
+```
+23F2004644_MLOPS_WEEKLY_ASSIGNMENT/
+├── Feast_IRIS_Assignment_Week3.ipynb
+├── Modified_Driver_Ranking_Tutorial.ipynb
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── iris_data_adapted_for_feast.csv
+├── load_to_bigquery.py
+├── iris_feature_repo/
+│   ├── feature_store.yaml
+│   ├── iris_repo.py
+│   ├── parquet_converter.py
+│   ├── train.py
+│   ├── inference.py
+│   ├── iris_model.joblib
+│   └── data/
+└── iris_feature_repo_bq/
+    ├── feature_store.yaml
+    ├── iris_repo_bq.py
+    └── data/
+```
+
+The `data/` folders are populated automatically by Feast itself when you
+run `feast apply` (creates the registry) and `feast materialize`
+(creates/updates the online store) — their exact contents depend on
+your Feast version and aren't hand-authored files, so they aren't
+enumerated file-by-file here.
 
 ---
 
 ## Setup
 
 ```bash
-pip install feast scikit-learn pandas google-cloud-bigquery
+pip install -r requirements.txt
 ```
-
-Place `iris_data_adapted_for_feast.csv` in the project root (same folder
-as these files).
 
 ---
 
 ## Task 1 — Initialize the Feast Feature Repository
 
-```bash
-mkdir -p iris_feature_repo/data
-cp feature_store.yaml iris_feature_repo/feature_store.yaml
-cp iris_repo.py iris_feature_repo/iris_repo.py
-cp iris_data_adapted_for_feast.csv iris_feature_repo/data/
-```
+The Feast repository lives in `iris_feature_repo/` — a `feature_store.yaml`
+plus a `data/` directory, following Feast's conventions directly rather
+than using `feast init` (which scaffolds a nested subfolder along with
+unrelated example data not relevant to this dataset).
 
 `feature_store.yaml` uses a local provider with a SQLite online store —
 no cloud dependency for Tasks 1–5.
 
 ## Task 2 — Entities, Data Sources & Feature Views
 
-Defined in `iris_repo.py`:
+Defined in `iris_feature_repo/iris_repo.py`:
 - **Entity**: `iris_id` — uniquely identifies each iris plant.
-- **Data source**: `FileSource` pointing at the (Parquet-converted)
+- **Data source**: `FileSource` pointing at the Parquet-converted
   dataset, with `timestamp_field="event_timestamp"` set explicitly
   (Feast can't auto-infer it here since both `event_timestamp` and
   `created_timestamp` look like timestamp columns).
@@ -62,9 +75,13 @@ Defined in `iris_repo.py`:
   `sepal_width`, `petal_length`, `petal_width`, `species` to the entity
   and source.
 
-The CSV needs a one-time conversion to Parquet (`FileSource` is most
-reliable with Parquet) — done in the notebook / see `train.py`'s data
-prep step.
+The CSV is converted to Parquet once using `parquet_converter.py`
+(`FileSource` is most reliable against Parquet):
+
+```bash
+cd iris_feature_repo
+python3 parquet_converter.py --input data/iris_data_adapted_for_feast.csv --output data/iris_data_adapted_for_feast.parquet
+```
 
 ## Task 3 — Apply & Materialize
 
@@ -82,7 +99,8 @@ in the console output.
 ## Task 4 — Offline Retrieval for Training
 
 ```bash
-python train.py
+cd iris_feature_repo
+python3 train.py
 ```
 
 Pulls historical features via `store.get_historical_features()` — the
@@ -94,7 +112,8 @@ feature values. Trains a `RandomForestClassifier` and saves it to
 ## Task 5 — Online Retrieval for Inference
 
 ```bash
-python inference.py
+cd iris_feature_repo
+python3 inference.py
 ```
 
 Fetches features for given `iris_id`s from the **online** store via
@@ -102,19 +121,18 @@ Fetches features for given `iris_id`s from the **online** store via
 compares those predictions against predictions made directly from the
 raw CSV — demonstrating no training/serving skew.
 
-## Task 6 (Optional) — BigQuery Backend
+## Task 6 — BigQuery Backend
 
 ```bash
-python load_to_bigquery.py <YOUR_GCP_PROJECT_ID>
+python3 load_to_bigquery.py <YOUR_GCP_PROJECT_ID>
 ```
 Loads the dataset into `iris_feast_dataset.iris_features` in BigQuery.
 
-```bash
-mkdir -p iris_feature_repo_bq/data
-cp feature_store_bigquery.yaml iris_feature_repo_bq/feature_store.yaml
-cp iris_repo_bq.py iris_feature_repo_bq/iris_repo_bq.py
-# edit both files: replace <YOUR_GCP_PROJECT_ID> with your actual project ID
+Then, inside `iris_feature_repo_bq/feature_store.yaml` and
+`iris_repo_bq.py`, replace `<YOUR_GCP_PROJECT_ID>` with your actual
+project ID, and run:
 
+```bash
 cd iris_feature_repo_bq
 feast apply
 feast materialize 2025-09-01T00:00:00 2025-10-05T00:00:00
@@ -122,8 +140,8 @@ feast materialize 2025-09-01T00:00:00 2025-10-05T00:00:00
 
 This swaps only the **offline store** to BigQuery (the online store
 stays SQLite, since BigQuery isn't built for millisecond-level serving
-reads). `train.py`-equivalent retrieval code is unchanged — Feast
-abstracts the backend behind `get_historical_features()`.
+reads). Retrieval code is unchanged — Feast abstracts the backend
+behind `get_historical_features()`.
 
 **Trade-offs vs local SQLite/file backend:**
 - **Latency**: BigQuery queries pay network + query-planning overhead
@@ -140,7 +158,6 @@ abstracts the backend behind `get_historical_features()`.
 
 ## Requirements
 
-- Run in a GCP environment (per assignment rules) — required for Task 6,
-  optional for Tasks 1–5.
+- Run in a GCP environment (per assignment rules).
 - GCP service account / user needs BigQuery Data Editor + BigQuery Job
   User roles for Task 6.
