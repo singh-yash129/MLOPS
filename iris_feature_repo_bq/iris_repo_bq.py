@@ -11,7 +11,7 @@ iris = Entity(
 
 iris_source = BigQuerySource(
     name="iris_bq_source",
-    table="qwiklabs-gcp-04-e2161030bace.iris_feast_dataset.iris_features",
+    table="<YOUR_GCP_PROJECT_ID>.iris_feast_dataset.iris_features",
     timestamp_field="event_timestamp",
     created_timestamp_column="created_timestamp",
 )
