@@ -1,18 +1,7 @@
-"""
-Task 6: Feast feature definitions using a BigQuery data source instead
-of the local Parquet file. Everything else (entity, feature view schema)
-is identical to Tasks 1-5 -- only the `source` object changes.
-
-Replace qwiklabs-gcp-04-e2161030bace with your actual GCP project ID (must match
-the one used in load_to_bigquery.py and feature_store.yaml).
-"""
 
 from datetime import timedelta
-
 from feast import BigQuerySource, Entity, FeatureView, Field
 from feast.types import Float32, String
-
-PROJECT_ID = "qwiklabs-gcp-04-e2161030bace"
 
 iris = Entity(
     name="iris_id",
@@ -22,7 +11,7 @@ iris = Entity(
 
 iris_source = BigQuerySource(
     name="iris_bq_source",
-    table=f"{PROJECT_ID}.iris_feast_dataset.iris_features",
+    table="qwiklabs-gcp-04-e2161030bace.iris_feast_dataset.iris_features",
     timestamp_field="event_timestamp",
     created_timestamp_column="created_timestamp",
 )

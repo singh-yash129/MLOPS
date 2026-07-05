@@ -7,7 +7,16 @@ I
 )
 __dummy"
 __dummy_idJiris_feast_project
-Â—©Òˆ¤€Â—©Òˆ¤€1"$532b1733-963b-47c4-b4bc-8839c14be3cc*Í—©Ò¸½ó2†
+Â—©Òˆ¤€Â—©Òˆ¤€
+H
+(
+__dummy"
+__dummy_idJiris_feature_repo
+Ñ©Ò ÎÚ»Ñ©Ò ÎÚ»
+…
+e
+iris_id>Unique identifier for each individual iris plant being tracked"iris_idJiris_feature_repo
+Ñ©Ò˜ƒæ»Ñ©Ò˜ƒæ»1"$24289100-880f-45ef-8c0c-46e84c7d9d26*‚©ÒøôÑ'2†
 Ò
 iris_featuresiris_feast_projectiris_id"
 sepal_length"
@@ -17,13 +26,27 @@ __dummy_idJiris_feast_project
 species2€´¼:±event_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_source’Â—©Ò Êõm"Â—©Ò°‚ñ@b
 iris_id’latest/
 Â—©ÒÈ¥¶€Í—©ÒàéÒ
-€ÄÓÅ€ê†Ç0R®
-«
-,feast.infra.online_stores.sqlite.SqliteTable"{
-W/home/jupyter/23F2004644_MLOPS_WEEKLY_ASSIGNMENT/iris_feature_repo/data/online_store.db iris_feast_project_iris_featuresbÆevent_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_sourceªiris_feast_project’Â—©Ò Êõm"Â—©Ò°‚ñŠ2
+€ÄÓÅ€ê†Ç02—
+Ñ
+iris_featuresiris_feature_repoiris_id"
+sepal_length"
+sepal_width"
+petal_length"
+petal_width"
+species2€´¼:±event_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_source’÷©Ò€‰‚("÷©Ò€‰‚(@b
+iris_id’latestA
+Ñ©Ò¸ïö»‚©Ò€í·'
+€ÄÓÅ€ê†Ç
+€ÄÓÅ€ê†Ç0R­
+ª
+,feast.infra.online_stores.sqlite.SqliteTable"z
+W/home/jupyter/23F2004644_MLOPS_WEEKLY_ASSIGNMENT/iris_feature_repo/data/online_store.dbiris_feature_repo_iris_featuresbÆevent_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_sourceªiris_feast_project’Â—©Ò Êõm"Â—©Ò°‚ñbÆevent_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_sourceªiris_feature_repo’Ğ©Òø«}"Ñ©ÒèòÆ»Š2
 
 iris_feast_project
-Â—©Òà‰ÉnÂ—©Òà‰Én’Ş
+Â—©Òà‰ÉnÂ—©Òà‰ÉnŠ3
+
+iris_feature_repo
+Ñ©Ò£Ÿ¯Ñ©Ò£Ÿ¯’»
 Û
 iris_featuresiris_feast_project"feature_view*ó
 Ò
@@ -35,3 +58,14 @@ W/home/jupyter/23F2004644_MLOPS_WEEKLY_ASSIGNMENT/iris_feature_repo/data/online_
 species2€´¼:±event_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_source’Â—©Ò Êõm"Â—©Ò°‚ñ@b
 iris_id’latest
 Â—©ÒÈ¥¶€Â—©ÒÈ¥¶€2Â—©Ò¨“…B$72ff196b-3149-4dac-a848-fae49ee500ae
+Ú
+iris_featuresiris_feature_repo"feature_view*ó
+Ò
+iris_featuresiris_feature_repoiris_id"
+sepal_length"
+sepal_width"
+petal_length"
+petal_width"
+species2€´¼:²event_timestamp*created_timestampZ*(data/iris_data_adapted_for_feast.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢iris_source’Ğ©Òø«}"Ñ©ÒèòÆ»@b
+iris_id’latest
+Ñ©Ò¸ïö»Ñ©Ò¸ïö»2Ñ©ÒèÒ¤¼B$d0b80d77-c19c-441e-a7f4-3938be09857a

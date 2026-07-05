@@ -1,4 +1,4 @@
-project: iris_feast_project
+project: iris_feature_repo
 provider: local
 registry: data/registry.db
 online_store:

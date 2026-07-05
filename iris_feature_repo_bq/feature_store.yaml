@@ -1,17 +1,3 @@
-# Task 6: BigQuery backend configuration.
-#
-# Replace qwiklabs-gcp-04-e2161030bace with your actual GCP project ID.
-# The dataset (iris_feast_dataset) will be created in BigQuery if it
-# doesn't already exist, as long as your service account / user has
-# BigQuery Data Editor + BigQuery Job User roles.
-#
-# NOTE: online_store is left as local SQLite here, since the assignment
-# says "Replace ... for either the offline store, the online store, or
-# both". This config swaps the OFFLINE store only (historical/training
-# retrieval), which is the change that matters most for point-in-time
-# correctness at scale. See the notes at the bottom of this file for how
-# to also swap the online store to Datastore.
-
 project: iris_feature_repo_bq
 provider: gcp
 registry: data/registry.db
@@ -20,22 +6,10 @@ offline_store:
     type: bigquery
     dataset: iris_feast_dataset
     project_id: qwiklabs-gcp-04-e2161030bace
-    location: US                     # match your BigQuery dataset region
+    location: US
 
 online_store:
     type: sqlite
     path: data/online_store.db
 
 entity_key_serialization_version: 2
-
-# ---------------------------------------------------------------------
-# OPTIONAL: to also swap the ONLINE store to a GCP-native low-latency
-# store (Datastore), replace the online_store block above with:
-#
-# online_store:
-#     type: datastore
-#     project_id: qwiklabs-gcp-04-e2161030bace
-#
-# This requires the Datastore API enabled on your GCP project and
-# appropriate IAM roles (Datastore User).
-# ---------------------------------------------------------------------
