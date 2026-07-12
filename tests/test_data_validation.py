@@ -1,38 +1,43 @@
 """
 Task 1: Data Validation Tests
 Validates schema, missing values, feature types, and value ranges
-for the IRIS training and evaluation datasets.
+for the IRIS dataset (latest DVC-tracked iteration).
 """
 
 import pandas as pd
 import pytest
 
-TRAIN_PATH = "data/train.csv"
-EVAL_PATH = "data/eval.csv"
+# Using the latest iteration as both the train and eval reference set.
+# Update these paths if you want to validate a different iteration.
+TRAIN_PATH = "dvc_data/iris_iter_3.csv"
+EVAL_PATH = "dvc_data/iris_iter_3.csv"
 
 EXPECTED_COLUMNS = [
-    "sepal_length",
-    "sepal_width",
-    "petal_length",
-    "petal_width",
-    "species",
+    "sepal length (cm)",
+    "sepal width (cm)",
+    "petal length (cm)",
+    "petal width (cm)",
+    "target",
 ]
 
 NUMERIC_COLUMNS = [
-    "sepal_length",
-    "sepal_width",
-    "petal_length",
-    "petal_width",
+    "sepal length (cm)",
+    "sepal width (cm)",
+    "petal length (cm)",
+    "petal width (cm)",
 ]
 
-VALID_SPECIES = {"setosa", "versicolor", "virginica"}
+TARGET_COLUMN = "target"
+
+# sklearn's load_iris() encodes species as integers: 0=setosa, 1=versicolor, 2=virginica
+VALID_TARGET_VALUES = {0, 1, 2}
 
 # Reasonable IRIS value ranges (cm), with a little slack
 VALUE_RANGES = {
-    "sepal_length": (3.0, 9.0),
-    "sepal_width": (1.5, 5.5),
-    "petal_length": (0.5, 8.0),
-    "petal_width": (0.05, 3.5),
+    "sepal length (cm)": (3.0, 9.0),
+    "sepal width (cm)": (1.5, 5.5),
+    "petal length (cm)": (0.5, 8.0),
+    "petal width (cm)": (0.05, 3.5),
 }
 
 
@@ -77,7 +82,9 @@ def test_train_feature_types(train_df):
         assert pd.api.types.is_numeric_dtype(train_df[col]), (
             f"Column '{col}' should be numeric, got {train_df[col].dtype}"
         )
-    assert train_df["species"].dtype == object, "species column should be string/categorical"
+    assert pd.api.types.is_numeric_dtype(train_df[TARGET_COLUMN]), (
+        "target column should be numeric (0, 1, or 2)"
+    )
 
 
 def test_eval_feature_types(eval_df):
@@ -107,17 +114,17 @@ def test_eval_value_ranges(eval_df):
 
 # ---------- Label validity ----------
 
-def test_train_species_values_valid(train_df):
-    unique_species = set(train_df["species"].str.lower().unique())
-    assert unique_species.issubset(VALID_SPECIES), (
-        f"Unexpected species labels found: {unique_species - VALID_SPECIES}"
+def test_train_target_values_valid(train_df):
+    unique_targets = set(train_df[TARGET_COLUMN].unique())
+    assert unique_targets.issubset(VALID_TARGET_VALUES), (
+        f"Unexpected target labels found: {unique_targets - VALID_TARGET_VALUES}"
     )
 
 
-def test_eval_species_values_valid(eval_df):
-    unique_species = set(eval_df["species"].str.lower().unique())
-    assert unique_species.issubset(VALID_SPECIES), (
-        f"Unexpected species labels found: {unique_species - VALID_SPECIES}"
+def test_eval_target_values_valid(eval_df):
+    unique_targets = set(eval_df[TARGET_COLUMN].unique())
+    assert unique_targets.issubset(VALID_TARGET_VALUES), (
+        f"Unexpected target labels found: {unique_targets - VALID_TARGET_VALUES}"
     )
 
 

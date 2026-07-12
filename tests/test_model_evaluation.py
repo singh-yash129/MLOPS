@@ -10,16 +10,17 @@ import pandas as pd
 import pytest
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-MODEL_PATH = "models/model.pkl"
-EVAL_PATH = "data/eval.csv"
+# Using the latest DVC-tracked iteration's model and data.
+MODEL_PATH = "dvc_models/model_iter_3.pkl"
+EVAL_PATH = "dvc_data/iris_iter_3.csv"
 
 FEATURE_COLUMNS = [
-    "sepal_length",
-    "sepal_width",
-    "petal_length",
-    "petal_width",
+    "sepal length (cm)",
+    "sepal width (cm)",
+    "petal length (cm)",
+    "petal width (cm)",
 ]
-TARGET_COLUMN = "species"
+TARGET_COLUMN = "target"
 
 # Minimum acceptable thresholds — tune to your actual model's expected performance
 MIN_ACCURACY = 0.90
