@@ -1,0 +1,5 @@
+outs:
+- md5: ff6fb57c187d6ae6fa40e3eef3326cc9
+  size: 177248
+  hash: md5
+  path: model_iter_1.pkl
