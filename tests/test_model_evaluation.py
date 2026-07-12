@@ -10,8 +10,9 @@ import pandas as pd
 import pytest
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-MODEL_PATH = "models/model.pkl"
-EVAL_PATH = "data/eval.csv"
+# Using the latest DVC-tracked iteration's model and data.
+MODEL_PATH = "dvc_models/model_iter_3.pkl"
+EVAL_PATH = "dvc_data/iris_iter_3.csv"
 
 FEATURE_COLUMNS = [
     "sepal_length",
