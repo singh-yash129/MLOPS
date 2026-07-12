@@ -1,0 +1,123 @@
+name: MLOps CI Pipeline
+
+# Task 4: run on every push (any branch) and every pull request
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required for Workload Identity Federation
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install dvc[gs] pytest
+
+      # Task 3: Authenticate to GCP via Workload Identity Federation (no JSON key)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: DVC pull data and models
+        run: |
+          dvc pull -v
+
+      - name: Run pytest suite
+        run: |
+          pytest tests/ --junitxml=pytest_report.xml -v
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report
+          path: pytest_report.xml
+
+      - name: Upload metrics report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: metrics-report
+          path: metrics_report.md
+
+  cml-report:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install dvc[gs] pytest
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: DVC pull data and models
+        run: dvc pull -v
+
+      - name: Run tests and generate metrics report
+        run: pytest tests/ -v || true
+
+      - name: Setup CML
+        uses: iterative/setup-cml@v2
+
+      # Task 5: Publish the test report as a PR comment
+      # Note: cml comment create only posts to a Pull Request context.
+      # On a plain push (no PR open yet) this step is skipped.
+      - name: Post CML report
+        if: github.event_name == 'pull_request'
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "# CI Test Report" > report.md
+          echo "" >> report.md
+          if [ -f metrics_report.md ]; then
+            cat metrics_report.md >> report.md
+          else
+            echo "No metrics report generated." >> report.md
+          fi
+          cml comment create report.md
