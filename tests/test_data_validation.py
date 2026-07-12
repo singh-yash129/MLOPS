@@ -1,14 +1,16 @@
 """
 Task 1: Data Validation Tests
 Validates schema, missing values, feature types, and value ranges
-for the IRIS training and evaluation datasets.
+for the IRIS dataset (latest DVC-tracked iteration).
 """
 
 import pandas as pd
 import pytest
 
-TRAIN_PATH = "data/train.csv"
-EVAL_PATH = "data/eval.csv"
+# Using the latest iteration as both the train and eval reference set.
+# Update these paths if you want to validate a different iteration.
+TRAIN_PATH = "dvc_data/iris_iter_3.csv"
+EVAL_PATH = "dvc_data/iris_iter_3.csv"
 
 EXPECTED_COLUMNS = [
     "sepal_length",
