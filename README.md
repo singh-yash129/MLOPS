@@ -1,4 +1,4 @@
-# IRIS MLOps Pipeline — CI Integration (Week 4)
+# IRIS MLOps Pipeline — CI Integration
 
 Continuous Integration for the IRIS classification pipeline using **GitHub Actions**, **DVC**, and **CML**. Every push and pull request automatically pulls versioned data/models, runs validation and evaluation tests, and posts results as a PR comment.
 
