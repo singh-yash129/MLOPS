@@ -12,6 +12,22 @@ from sklearn.metrics import accuracy_score
 os.makedirs("dvc_data", exist_ok=True)
 os.makedirs("dvc_models", exist_ok=True)
 
+# Realistic bounds for each IRIS feature (cm), used to clip augmentation noise
+FEATURE_BOUNDS = {
+    "sepal length (cm)": (3.0, 9.0),
+    "sepal width (cm)": (1.5, 5.5),
+    "petal length (cm)": (0.5, 8.0),
+    "petal width (cm)": (0.1, 3.5),
+}
+
+
+def clip_to_bounds(df, feature_names):
+    for col in feature_names:
+        low, high = FEATURE_BOUNDS[col]
+        df[col] = df[col].clip(lower=low, upper=high)
+    return df
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--iteration", type=int, required=True, choices=[1, 2, 3])
@@ -27,6 +43,7 @@ def main():
         rng = np.random.RandomState(42)
         extra = df.sample(50, random_state=42).copy()
         extra[iris.feature_names] += rng.normal(0, 0.05, extra[iris.feature_names].shape)
+        extra = clip_to_bounds(extra, iris.feature_names)
         df = pd.concat([df, extra], ignore_index=True)
         print(f"Iteration 2: Added 50 rows → total {len(df)} rows")
 
@@ -34,6 +51,7 @@ def main():
         rng = np.random.RandomState(99)
         extra = df.sample(100, random_state=99).copy()
         extra[iris.feature_names] += rng.normal(0, 0.05, extra[iris.feature_names].shape)
+        extra = clip_to_bounds(extra, iris.feature_names)
         df = pd.concat([df, extra], ignore_index=True)
         print(f"Iteration 3: Added 100 rows → total {len(df)} rows")
 
