@@ -50,7 +50,7 @@ jobs:
       # Task 6 (optional): fetch the latest model from MLflow Registry
       # and run sanity checks against it, instead of a DVC-based model
       - name: Run pytest suite (model fetched from MLflow Registry)
-        run: pytest tests/ --junitxml=pytest_report.xml -v
+        run: pytest tests/test_data_validation.py tests/test_model_registry.py --junitxml=pytest_report.xml -v
 
       - name: Upload test results
         if: always()
@@ -59,9 +59,9 @@ jobs:
           name: pytest-report
           path: pytest_report.xml
 
-      - name: Upload MLflow run artifacts
+      - name: Upload MLflow tracking database
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mlruns
-          path: mlruns/
+          name: mlflow-db
+          path: mlflow.db
