@@ -49,7 +49,7 @@ def load_model(tracking_uri: str, version: str = None, alias: str = None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--tracking-uri", type=str, default="file:./mlruns",
+        "--tracking-uri", type=str, default="sqlite:///mlflow.db",
         help="MLflow tracking URI",
     )
     parser.add_argument("--version", type=str, default=None, help="Specific model version")
