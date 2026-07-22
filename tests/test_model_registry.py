@@ -11,7 +11,7 @@ import pytest
 from sklearn.datasets import load_iris
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-TRACKING_URI = "file:./mlruns"
+TRACKING_URI = "sqlite:///mlflow.db"
 REGISTERED_MODEL_NAME = "iris_random_forest"
 
 MIN_ACCURACY = 0.90
