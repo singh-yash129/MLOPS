@@ -29,18 +29,10 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
 
-      # Task 6 (optional): fetch model from MLflow at build time.
-      # Requires mlflow.db (or a remote tracking URI) to be present/reachable.
-      - name: Set up Python (for model fetch step)
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install mlflow (for training + build-time model fetch)
-        run: pip install mlflow scikit-learn
-
-      - name: Task 6 - Train and register model (self-contained, no prior-week dependency)
-        run: python3 scripts/train_for_deployment.py
+      # Task 6 (optional): training and model-fetching now happen INSIDE
+      # the Docker build itself (see Dockerfile), so the MLflow tracking
+      # database and artifact paths stay consistent within one filesystem.
+      # No separate host-side training step is needed here.
 
       - name: Task 4 - Build Docker image
         run: |

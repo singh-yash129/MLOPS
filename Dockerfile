@@ -9,34 +9,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+COPY requirements.txt requirements-root.txt
 COPY app/requirements.txt .
-RUN pip install --no-cache-dir --timeout=120 --retries=5 -r requirements.txt
+RUN pip install --no-cache-dir --timeout=120 --retries=5 -r requirements.txt \
+    && pip install --no-cache-dir --timeout=120 --retries=5 -r requirements-root.txt
 
 COPY app/main.py .
 
-# ---- Task 6 (optional): fetch the best model from the MLflow Model Registry
-# at build time and bundle it into the image, so the running container never
-# needs runtime access to the MLflow tracking server.
+# ---- Task 6 (optional): train fresh and fetch the best model from the
+# MLflow Model Registry, entirely INSIDE the container build.
+#
+# Training happens here (not on the host) so the MLflow tracking database
+# and artifact paths are written and read from the same filesystem --
+# avoiding host/container path mismatches (e.g. a Windows absolute path
+# like D:/MLops/mlruns/... baked into the DB, which is meaningless once
+# copied into a Linux container).
 #
 # Build with:
-#   docker build \
-#     --build-arg FETCH_MODEL=true \
-#     --build-arg MLFLOW_TRACKING_URI=sqlite:///mlflow.db \
-#     --build-arg MODEL_NAME=iris_random_forest \
-#     -t iris-api .
+#   docker build --build-arg FETCH_MODEL=true -t iris-api .
 #
-# If FETCH_MODEL is not set, the image is built without a model — mount one
-# at runtime instead via the MODEL_PATH environment variable / a volume.
+# If FETCH_MODEL is not set, the image is built without a model -- mount
+# one at runtime instead via the MODEL_PATH environment variable / a volume.
 ARG FETCH_MODEL=false
 ARG MLFLOW_TRACKING_URI=sqlite:///mlflow.db
 ARG MODEL_NAME=iris_random_forest
 
-COPY mlflow.db* ./
-COPY mlruns ./mlruns
+COPY scripts/train_for_deployment.py ./scripts/train_for_deployment.py
 COPY scripts/fetch_model_for_container.py ./scripts/fetch_model_for_container.py
 
 RUN mkdir -p /app/model && \
     if [ "$FETCH_MODEL" = "true" ]; then \
+        python scripts/train_for_deployment.py --tracking-uri "$MLFLOW_TRACKING_URI" && \
         python scripts/fetch_model_for_container.py \
             --tracking-uri "$MLFLOW_TRACKING_URI" \
             --model-name "$MODEL_NAME" \
