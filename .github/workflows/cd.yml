@@ -6,13 +6,6 @@ on:
       - '**'
   workflow_dispatch: {}
 
-env:
-  PROJECT_ID: qwiklabs-gcp-04-84fd8c2fbce6   # update to your active project ID
-  REGION: us-central1
-  REPO_NAME: iris-repo
-  IMAGE_NAME: iris-api
-  CLUSTER_NAME: iris-cluster
-
 jobs:
   build-push-deploy:
     runs-on: ubuntu-latest
@@ -34,7 +27,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
 
       # Task 6 (optional): fetch model from MLflow at build time.
       # Requires mlflow.db (or a remote tracking URI) to be present/reachable.
@@ -51,26 +44,26 @@ jobs:
 
       - name: Task 4 - Build Docker image
         run: |
-          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          IMAGE_URI="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPO_NAME }}/${{ secrets.GCP_IMAGE_NAME }}:${{ github.sha }}"
           docker build \
             --build-arg FETCH_MODEL=true \
             --build-arg MLFLOW_TRACKING_URI=sqlite:///mlflow.db \
             --build-arg MODEL_NAME=iris_random_forest \
             -t "$IMAGE_URI" \
-            -t "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest" \
+            -t "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPO_NAME }}/${{ secrets.GCP_IMAGE_NAME }}:latest" \
             .
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
       - name: Task 4 - Push image to Artifact Registry
         run: |
           docker push "${{ env.IMAGE_URI }}"
-          docker push "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest"
+          docker push "${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPO_NAME }}/${{ secrets.GCP_IMAGE_NAME }}:latest"
 
       - name: Get GKE credentials
         uses: google-github-actions/get-gke-credentials@v2
         with:
-          cluster_name: ${{ env.CLUSTER_NAME }}
-          location: ${{ env.REGION }}
+          cluster_name: ${{ secrets.GCP_CLUSTER_NAME }}
+          location: ${{ secrets.GCP_REGION }}
 
       - name: Task 5 - Deploy to GKE
         run: |
