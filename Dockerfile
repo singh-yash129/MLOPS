@@ -32,6 +32,7 @@ ARG MLFLOW_TRACKING_URI=sqlite:///mlflow.db
 ARG MODEL_NAME=iris_random_forest
 
 COPY mlflow.db* ./
+COPY mlruns ./mlruns
 COPY scripts/fetch_model_for_container.py ./scripts/fetch_model_for_container.py
 
 RUN mkdir -p /app/model && \
