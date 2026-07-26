@@ -1,0 +1,27 @@
+# MLflow tracking artifacts (regenerated on each run, not committed)
+mlflow.db
+mlruns/
+mlartifacts/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+
+# Local model artifacts (fetched fresh at Docker build time)
+model/
+*.pkl
+
+# Docker
+.dockerignore
+
+# OS/editor junk
+.DS_Store
+.vscode/
+.idea/
+
+# Env files (never commit secrets/credentials)
+.env
+*.env
