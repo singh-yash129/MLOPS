@@ -1,20 +1,27 @@
-# IRIS MLOps Pipeline — MLflow Integration (Week 5)
+# IRIS Inference API — Continuous Deployment (Week 6)
 
-Experiment tracking and a model registry for the IRIS classification pipeline using **MLflow**. Every training run logs hyperparameters, evaluation metrics, and the trained model, so experiments can be compared side-by-side and the best model served directly from a central registry — replacing DVC-based model storage.
+Containerizes the IRIS inference API with Docker and deploys it to Google Kubernetes Engine (GKE), with the entire build → push → deploy cycle automated through GitHub Actions.
+
+This branch is self-contained — it does not depend on any files from earlier weekly branches. Training, containerization, and deployment are all defined here.
 
 ## Pipeline Overview
 
 ```
-Training Loop
-      │
-      ▼
-MLflow
-      │
-      ├── Experiment Tracking   (params + metrics + artifacts per run)
-      └── Model Registry        (version + fetch by name/version)
-      │
-      ▼
-Evaluation / Inference
+Code Push
+    │
+    ▼
+CI (tests pass, from Week 4)
+    │
+    ▼
+CD Pipeline
+    │
+    ├── Train + register model (MLflow)
+    ├── Docker Build        (package API + model image)
+    ├── Artifact Registry   (push container image)
+    └── GKE                 (deploy to Kubernetes)
+    │
+    ▼
+Live API
 ```
 
 ## Repository Structure
@@ -23,104 +30,115 @@ Evaluation / Inference
 .
 ├── .github/
 │   └── workflows/
-│       └── cp.yml                     # CI: DVC pull (data), MLflow train, registry-based pytest
-├── .dvc/
-│   └── config                         # DVC remote (GCS bucket) — data only, models removed in Week 5
-├── dvc_data/
-│   ├── iris_iter_1.csv.dvc
-│   ├── iris_iter_2.csv.dvc
-│   └── iris_iter_3.csv.dvc
+│       └── cd.yml                       # Train, build, push, deploy — end to end
+├── app/
+│   ├── main.py                          # FastAPI inference service
+│   └── requirements.txt                 # API runtime dependencies
 ├── scripts/
-│   ├── train.py                       # Week 2/4 training script (DVC-versioned model, now unused for models)
-│   ├── train_mlflow.py                # Hyperparameter tuning + MLflow experiment tracking
-│   └── evaluate_from_registry.py      # Loads model from MLflow Model Registry
-├── tests/
-│   ├── test_data_validation.py        # Schema, nulls, types, value-range checks
-│   └── test_model_registry.py         # Model fetched from MLflow Registry, metric thresholds
-├── mlflow.db                          # MLflow SQLite tracking store (generated, gitignored)
-├── requirements.txt
+│   ├── train_for_deployment.py          # Standalone training + MLflow registration
+│   └── fetch_model_for_container.py     # Pulls the registered model at build time
+├── k8s/
+│   ├── deployment.yaml                  # Kubernetes Deployment (2 replicas, health probes)
+│   └── service.yaml                     # LoadBalancer Service exposing port 80 → 8080
+├── Dockerfile                           # Builds the API image, optionally bundles the model
+├── requirements.txt                     # Training/build-time dependencies
 └── README.md
 ```
 
-## Prerequisites
+## Pod vs Container (Task 1)
 
-- GCP project with a GCS bucket configured as the DVC remote (from Week 2) — used for **data only** from this week onward
-- A GCP service account with `roles/storage.objectViewer` on that bucket
-- Workload Identity Federation configured between the service account and this GitHub repository (see [Authentication](#authentication))
-- Python 3.12 (required by `scikit-learn==1.9.0`)
+A **Docker container** is a single running process with its own isolated filesystem — the packaging and runtime unit for one application.
 
-## Authentication
+A **Kubernetes Pod** wraps one or more containers that are always scheduled together on the same node, sharing the same network namespace (same IP, reachable via `localhost` between containers) and storage volumes.
 
-Since GCP service account **key creation is disabled by org policy**, this pipeline authenticates using **Workload Identity Federation (WIF)** — no JSON key is ever downloaded or stored.
+Kubernetes deploys Pods rather than raw containers because it needs an atomic unit of scheduling — a group of tightly-coupled containers (e.g., a main app plus a logging sidecar) that must be placed, scaled, and restarted together. The Pod is that atomic unit; the container is what actually runs inside it.
 
-Two GitHub repository secrets are required (**Settings → Secrets and variables → Actions**):
+## API Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Service status |
+| `GET` | `/health` | Readiness/liveness probe — confirms the model is loaded |
+| `POST` | `/predict` | Runs inference; accepts the four IRIS feature measurements |
+
+Example request:
+```bash
+curl -X POST http://<EXTERNAL_IP>/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sepal length (cm)": 5.1,
+    "sepal width (cm)": 3.5,
+    "petal length (cm)": 1.4,
+    "petal width (cm)": 0.2
+  }'
+```
+Response:
+```json
+{"prediction": 0, "species": "setosa"}
+```
+
+## GCP Setup (Task 3)
+
+```bash
+PROJECT_ID=$(gcloud config get-value project)
+
+gcloud services enable artifactregistry.googleapis.com container.googleapis.com --project="$PROJECT_ID"
+
+gcloud artifacts repositories create iris-repo \
+  --repository-format=docker --location=us-central1 --project="$PROJECT_ID"
+
+gcloud iam service-accounts create github-cd-deploy \
+  --project="$PROJECT_ID" --display-name="GitHub Actions CD"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:github-cd-deploy@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/artifactregistry.writer"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:github-cd-deploy@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/container.developer"
+
+gcloud container clusters create-auto iris-cluster \
+  --region=us-central1 --project="$PROJECT_ID"
+```
+
+Authentication uses **Workload Identity Federation** (no downloaded service account key, per org policy) — reusing the same WIF pool/provider pattern established in Week 4, bound to this service account instead.
+
+Required GitHub repository secrets:
 
 | Secret | Value |
 |---|---|
 | `WIF_PROVIDER` | `projects/<PROJECT_NUMBER>/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
-| `WIF_SERVICE_ACCOUNT` | `github-ci-dvc@<PROJECT_ID>.iam.gserviceaccount.com` |
+| `WIF_SERVICE_ACCOUNT_CD` | `github-cd-deploy@<PROJECT_ID>.iam.gserviceaccount.com` |
 
-## MLflow Tracking Backend
+## Workflow (`.github/workflows/cd.yml`)
 
-MLflow's plain filesystem store (`file:./mlruns`) is in maintenance mode in the version used here. This pipeline uses the **SQLite backend** instead:
+Triggers on every push, plus manual `workflow_dispatch`. Steps:
 
-```
-sqlite:///mlflow.db
-```
+1. Checkout, authenticate to GCP via WIF
+2. **Task 6** — train a fresh model and register it in MLflow (`scripts/train_for_deployment.py`)
+3. **Task 2 & 4** — build the Docker image, fetching the registered model at build time (`scripts/fetch_model_for_container.py`) and bundling it in
+4. Push the image to Artifact Registry, tagged with both the commit SHA and `latest`
+5. **Task 5** — fetch GKE credentials, apply the Deployment and Service manifests, wait for rollout
+6. Verify the LoadBalancer IP is assigned and call `/health` to confirm the API is live
 
-`mlflow.db`, `mlruns/`, and `mlartifacts/` are git-ignored and regenerated fresh on each local run or CI run — they are not committed to the repository.
-
-## Workflow (`.github/workflows/cp.yml`)
-
-Triggers on every push and pull request, across **all branches**:
-
-```yaml
-on:
-  push:
-    branches: ['**']
-  pull_request:
-    branches: ['**']
-```
-
-Steps:
-1. Checkout the repository, install dependencies (Python 3.12)
-2. Authenticate to GCP via WIF
-3. `dvc pull` — fetch versioned **data** (models are no longer DVC-tracked)
-4. Run `scripts/train_mlflow.py` — hyperparameter tuning across multiple configurations, logging each run's parameters, metrics, and model to MLflow, registering the model under `iris_random_forest`
-5. Run the `pytest` suite — `test_model_registry.py` fetches the just-registered model directly from the MLflow Registry and validates accuracy, precision, recall, and F1 against minimum thresholds
-6. Upload the pytest report and the MLflow tracking database as workflow artifacts
-
-## Tasks Covered
-
-| Task | Description |
-|---|---|
-| 1 | Hyperparameter tuning — 3 configurations varying `n_estimators` and `max_depth` |
-| 2 | MLflow logging — parameters, metrics, and model artifact for every run |
-| 3 | Compare experiments in the MLflow Tracking UI |
-| 4 | Model artifacts removed from DVC; DVC now tracks data only |
-| 5 | Evaluation pipeline fetches the model by name/version from the MLflow Model Registry |
-| 6 (optional) | CI trains and fetches from the MLflow Registry in the same workflow run |
-
-## Running Tests Locally
+## Running Locally
 
 ```bash
 pip install -r requirements.txt
-dvc pull
+python3 scripts/train_for_deployment.py
 
-# Task 1 & 2
-python3 scripts/train_mlflow.py --iteration 3
+docker build --build-arg FETCH_MODEL=true -t iris-api .
+docker run -p 8080:8080 iris-api
 
-# Task 3
-mlflow ui --backend-store-uri sqlite:///mlflow.db
-# open http://localhost:5000 -> iris_classification experiment -> select runs -> Compare
-
-# Task 5
-python3 scripts/evaluate_from_registry.py
-pytest tests/test_model_registry.py -v
+curl http://localhost:8080/health
+curl -X POST http://localhost:8080/predict \
+  -H "Content-Type: application/json" \
+  -d '{"sepal length (cm)": 5.1, "sepal width (cm)": 3.5, "petal length (cm)": 1.4, "petal width (cm)": 0.2}'
 ```
 
 ## Notes
 
-- Metric thresholds in `tests/test_model_registry.py` (`MIN_ACCURACY`, `MIN_PRECISION`, `MIN_RECALL`, `MIN_F1`) should be tuned to match expected model performance.
-- `scripts/train.py` and any Week 4 DVC-based model tests are retained for history only — models are no longer read from DVC-tracked paths as of this week.
-- Data validation in Week 4 previously caught a real synthetic-augmentation bug (near-zero `petal width` from unclipped noise), fixed at the source in `scripts/train.py`'s clipping logic — the same clipping is reused in `train_mlflow.py`.
+- `FETCH_MODEL=false` (the Dockerfile's default) builds the API image without bundling a model — useful for testing the container structure without needing MLflow at build time.
+- The MLflow tracking backend used here is SQLite (`sqlite:///mlflow.db`), consistent with Week 5 — the plain filesystem store is in maintenance mode in the MLflow version used.
+- This branch was deliberately kept independent of `week_2`–`week_5` (no DVC, no Feast, no CI test files) so the CD pipeline can be evaluated and demonstrated on its own.

@@ -1,0 +1,91 @@
+name: CD Pipeline - Build, Push, Deploy
+
+on:
+  push:
+    branches:
+      - '**'
+  workflow_dispatch: {}
+
+env:
+  PROJECT_ID: qwiklabs-gcp-04-84fd8c2fbce6   # update to your active project ID
+  REGION: us-central1
+  REPO_NAME: iris-repo
+  IMAGE_NAME: iris-api
+  CLUSTER_NAME: iris-cluster
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT_CD }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      # Task 6 (optional): fetch model from MLflow at build time.
+      # Requires mlflow.db (or a remote tracking URI) to be present/reachable.
+      - name: Set up Python (for model fetch step)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install mlflow (for training + build-time model fetch)
+        run: pip install mlflow scikit-learn
+
+      - name: Task 6 - Train and register model (self-contained, no prior-week dependency)
+        run: python3 scripts/train_for_deployment.py
+
+      - name: Task 4 - Build Docker image
+        run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          docker build \
+            --build-arg FETCH_MODEL=true \
+            --build-arg MLFLOW_TRACKING_URI=sqlite:///mlflow.db \
+            --build-arg MODEL_NAME=iris_random_forest \
+            -t "$IMAGE_URI" \
+            -t "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest" \
+            .
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+      - name: Task 4 - Push image to Artifact Registry
+        run: |
+          docker push "${{ env.IMAGE_URI }}"
+          docker push "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:latest"
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.REGION }}
+
+      - name: Task 5 - Deploy to GKE
+        run: |
+          sed -i "s|IMAGE_PLACEHOLDER|${{ env.IMAGE_URI }}|g" k8s/deployment.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl rollout status deployment/iris-api --timeout=180s
+
+      - name: Verify deployment - get external IP and call API
+        run: |
+          echo "Waiting for LoadBalancer IP..."
+          for i in {1..30}; do
+            IP=$(kubectl get svc iris-api-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)
+            if [ -n "$IP" ]; then break; fi
+            sleep 10
+          done
+          echo "Service IP: $IP"
+          curl -s "http://$IP/health" || echo "Health check not yet reachable"
