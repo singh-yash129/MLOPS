@@ -17,7 +17,7 @@ spec:
       containers:
       - name: iris-api
         # IMPORTANT: Replace <YOUR_PROJECT_ID> with your actual GCP Project ID
-        image: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPO_NAME }}/${{ secrets.GCP_IMAGE_NAME }}:latest
+        image: IMAGE_PLACEHOLDER
         ports:
         - containerPort: 8080
         resources:
