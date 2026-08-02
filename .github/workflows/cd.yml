@@ -74,3 +74,23 @@ jobs:
           done
           echo "Service IP: $IP"
           curl -s "http://$IP/health" || echo "Health check not yet reachable"
+
+      - name: Install wrk
+        run: sudo apt-get update && sudo apt-get install -y wrk
+
+      - name: Get LoadBalancer External IP
+        run: |
+          echo "Waiting for External IP..."
+          for i in {1..30}; do
+            EXTERNAL_IP=$(kubectl get svc iris-api-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+            if [ -n "$EXTERNAL_IP" ]; then
+              echo "EXTERNAL_IP=$EXTERNAL_IP" >> $GITHUB_ENV
+              echo "API available at $EXTERNAL_IP"
+              break
+            fi
+            sleep 10
+          done
+
+      - name: Execute Stress Test
+        run: |
+          wrk -t4 -c1000 -d30s -s scripts/post.lua http://${EXTERNAL_IP}/predict

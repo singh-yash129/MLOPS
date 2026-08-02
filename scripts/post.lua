@@ -1,0 +1,3 @@
+wrk.method = "POST"
+wrk.body   = '{"sepal length (cm)": 5.1, "sepal width (cm)": 3.5, "petal length (cm)": 1.4, "petal width (cm)": 0.2}'
+wrk.headers["Content-Type"] = "application/json"
