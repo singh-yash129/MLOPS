@@ -57,11 +57,17 @@ jobs:
           cluster_name: ${{ secrets.GCP_CLUSTER_NAME }}
           location: ${{ secrets.GCP_REGION }}
 
-      - name: Task 5 - Deploy to GKE
+      - name: Deploy to GKE
         run: |
-          sed -i "s|IMAGE_PLACEHOLDER|${{ env.IMAGE_URI }}|g" k8s/deployment.yaml
+          # Build the full image URI using ONLY your GitHub Secrets
+          sed -i "s|IMAGE_PLACEHOLDER|${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_REPO_NAME }}/${{ secrets.GCP_IMAGE_NAME }}:latest|g" k8s/deployment.yaml
+          
+          # Apply the Kubernetes configurations
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/hpa.yaml
+          
+          # Wait for the deployment to finish
           kubectl rollout status deployment/iris-api --timeout=180s
 
       - name: Verify deployment - get external IP and call API
