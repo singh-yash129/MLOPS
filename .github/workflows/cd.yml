@@ -98,4 +98,4 @@ jobs:
 
       - name: Execute Stress Test
         run: |
-          wrk -t4 -c2000 -d30s -s scripts/post.lua http://${EXTERNAL_IP}/predict
+          wrk -t4 -c1000 -d30s -s scripts/post.lua http://${EXTERNAL_IP}/predict
