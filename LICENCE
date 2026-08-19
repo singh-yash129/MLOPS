@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# NOTE: data/, models/, and plots/ are intentionally NOT ignored here —
+# this week's outputs are committed directly (no DVC tracking required
+# for this assignment). If you'd rather keep the repo lighter and only
+# commit a few representative screenshots, uncomment the lines below:
+# data/
+# models/
+# plots/

@@ -1,0 +1,8 @@
+scikit-learn
+fairlearn
+shap
+matplotlib
+scipy
+pandas
+numpy
+joblib
