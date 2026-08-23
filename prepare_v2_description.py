@@ -47,7 +47,14 @@ def make_v2_record(row) -> dict:
         f"Identify the iris species."
     )
     output_text = f"This is {SPECIES_SENTENCE_NAMES[row['species']]}."
-    return {"input_text": input_text, "output_text": output_text}
+    # Same chat-style contents/role/parts schema as v1 -- required for
+    # Gemini supervised fine-tuning (see note in prepare_v1_raw.py).
+    return {
+        "contents": [
+            {"role": "user", "parts": [{"text": input_text}]},
+            {"role": "model", "parts": [{"text": output_text}]},
+        ]
+    }
 
 
 def write_jsonl(records, path):

@@ -100,14 +100,19 @@ def evaluate(test_path: str, version: str, endpoint_name: str, mock: bool, rng=N
     extractor = extract_species_v1 if version == "v1" else extract_species_v2
 
     for r in records:
-        true_species = r["output_text"].strip().lower()
+        # Test JSONL uses the same contents/role/parts schema as training
+        # data -- extract the user prompt and the model's expected answer.
+        input_text = r["contents"][0]["parts"][0]["text"]
+        expected_output_text = r["contents"][1]["parts"][0]["text"]
+
+        true_species = expected_output_text.strip().lower()
         if version == "v2":
             true_species = extract_species_v2(true_species)
 
         if mock:
             raw = mock_predict(true_species, version, rng)
         else:
-            raw = predict_vertex(endpoint_name, r["input_text"])
+            raw = predict_vertex(endpoint_name, input_text)
 
         pred = extractor(raw)
 

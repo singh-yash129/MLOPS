@@ -58,7 +58,18 @@ def make_v1_record(row) -> dict:
         f"petal_length: {row['petal length (cm)']}, "
         f"petal_width: {row['petal width (cm)']}"
     )
-    return {"input_text": input_text, "output_text": row["species"]}
+    output_text = row["species"]
+    # Gemini supervised fine-tuning requires the chat-style
+    # contents/role/parts schema -- NOT the legacy input_text/output_text
+    # format (that older format is for PaLM/text-bison models and will
+    # fail with "Converting from 'VertexTextBison' to 'GenerateContent'
+    # dataset format is currently not supported for this model.")
+    return {
+        "contents": [
+            {"role": "user", "parts": [{"text": input_text}]},
+            {"role": "model", "parts": [{"text": output_text}]},
+        ]
+    }
 
 
 def write_jsonl(records, path):
