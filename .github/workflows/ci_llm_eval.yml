@@ -1,0 +1,73 @@
+name: LLMOps-Evaluation-Guard
+
+on:
+  push:
+    branches: [ week_10 ]
+
+env:
+  PROJECT_ID: <YOUR_GCP_PROJECT_ID>
+  ACCURACY_THRESHOLD: "0.80"   # fail the build if either model drops below this
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install google-cloud-aiplatform
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Run evaluation against both tuned endpoints
+        id: eval
+        run: |
+          python evaluate_and_compare.py \
+            --v1-endpoint "${{ secrets.V1_ENDPOINT_NAME }}" \
+            --v2-endpoint "${{ secrets.V2_ENDPOINT_NAME }}" \
+            | tee eval_output.txt
+
+      - name: Check accuracy threshold (regression guard)
+        run: |
+          python - <<'EOF'
+          import json, sys
+
+          with open("data/evaluation_comparison.json") as f:
+              results = json.load(f)
+
+          threshold = float("${{ env.ACCURACY_THRESHOLD }}")
+          failed = False
+          for r in results:
+              print(f"{r['version']}: accuracy={r['accuracy']:.3f}, "
+                    f"format_compliance={r['format_compliance']:.3f}")
+              if r["accuracy"] < threshold:
+                  print(f"REGRESSION: {r['version']} accuracy "
+                        f"{r['accuracy']:.3f} is below threshold {threshold}")
+                  failed = True
+
+          if failed:
+              sys.exit(1)
+          print("All model versions meet the accuracy threshold.")
+          EOF
+
+      - name: Upload evaluation results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-evaluation-results
+          path: |
+            eval_output.txt
+            data/evaluation_comparison.json
