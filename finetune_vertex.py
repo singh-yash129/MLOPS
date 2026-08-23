@@ -36,7 +36,7 @@ import os
 
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-BASE_MODEL = "gemini-2.5-flash-lite-001"
+BASE_MODEL = "gemini-2.5-flash-lite"
 
 BUCKET_NAME = os.environ.get("GCP_BUCKET_NAME")
 if not PROJECT_ID or not BUCKET_NAME:
