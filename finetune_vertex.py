@@ -32,12 +32,19 @@ import time
 from vertexai.preview.tuning import sft
 import vertexai
 
-PROJECT_ID = "<YOUR_PROJECT_ID>"
-LOCATION = "us-central1"
-BASE_MODEL = "gemini-2.0-flash-001"   # cost-efficient Gemini model; check current
-                                       # Vertex AI docs for the latest tunable model ID
+import os
 
-BUCKET = "gs://<YOUR_BUCKET>/llmops"
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
+BASE_MODEL = "gemini-2.0-flash-001"
+
+BUCKET_NAME = os.environ.get("GCP_BUCKET_NAME")
+if not PROJECT_ID or not BUCKET_NAME:
+    raise EnvironmentError(
+        "Set GCP_PROJECT_ID and GCP_BUCKET_NAME environment variables "
+        "before running this script (see README for instructions)."
+    )
+BUCKET = f"gs://{BUCKET_NAME}/llmops"
 V1_TRAIN_URI = f"{BUCKET}/iris_v1_raw_train.jsonl"
 V2_TRAIN_URI = f"{BUCKET}/iris_v2_description_train.jsonl"
 
