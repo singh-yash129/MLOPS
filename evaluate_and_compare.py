@@ -24,7 +24,9 @@ Usage:
 
 import argparse
 import json
+import os
 import re
+import time
 
 import pandas as pd
 from sklearn.metrics import precision_score, recall_score
@@ -32,16 +34,49 @@ from sklearn.metrics import precision_score, recall_score
 VALID_SPECIES = ["setosa", "versicolor", "virginica"]
 
 
+def init_vertexai():
+    """Required before any GenerativeModel/predict_vertex call."""
+    import vertexai
+    project_id = os.environ.get("GCP_PROJECT_ID")
+    location = os.environ.get("GCP_LOCATION", "us-central1")
+    if not project_id:
+        raise EnvironmentError(
+            "Set GCP_PROJECT_ID before running evaluation against real "
+            "endpoints, e.g.: export GCP_PROJECT_ID=$(gcloud config get-value project)"
+        )
+    vertexai.init(project=project_id, location=location)
+
+
 # --------------------------------------------------------------------
 # Real Vertex AI prediction calls (used when NOT running --mock)
 # --------------------------------------------------------------------
-def predict_vertex(endpoint_name: str, input_text: str) -> str:
-    """Call a deployed Vertex AI tuned-model endpoint for one prediction."""
+def predict_vertex(endpoint_name: str, input_text: str, max_retries: int = 5) -> str:
+    """Call a deployed Vertex AI tuned-model endpoint for one prediction.
+
+    Retries on 429 RESOURCE_EXHAUSTED with exponential backoff -- tuned
+    endpoints frequently have low per-minute quota (especially on trial
+    projects), and a fresh deployment can also take a few minutes to
+    fully warm up before it can serve steady traffic.
+    """
+    import time
+    from google.api_core.exceptions import ResourceExhausted
     from vertexai.generative_models import GenerativeModel
 
     model = GenerativeModel(endpoint_name)
-    response = model.generate_content(input_text)
-    return response.text.strip()
+
+    delay = 5
+    for attempt in range(1, max_retries + 1):
+        try:
+            response = model.generate_content(input_text)
+            return response.text.strip()
+        except ResourceExhausted:
+            if attempt == max_retries:
+                raise
+            print(f"  [429 quota hit] retrying in {delay}s "
+                  f"(attempt {attempt}/{max_retries})...")
+            time.sleep(delay)
+            delay *= 2  # exponential backoff: 5, 10, 20, 40, 80s
+
 
 
 # --------------------------------------------------------------------
@@ -113,6 +148,8 @@ def evaluate(test_path: str, version: str, endpoint_name: str, mock: bool, rng=N
             raw = mock_predict(true_species, version, rng)
         else:
             raw = predict_vertex(endpoint_name, input_text)
+            time.sleep(1)  # small pacing delay between calls to avoid
+                            # tripping per-minute quota limits
 
         pred = extractor(raw)
 
@@ -183,6 +220,9 @@ def main():
 
     if not args.mock and (not args.v1_endpoint or not args.v2_endpoint):
         parser.error("--v1-endpoint and --v2-endpoint are required unless --mock is set")
+
+    if not args.mock:
+        init_vertexai()
 
     import numpy as np
     rng = np.random.default_rng(42)
