@@ -21,4 +21,4 @@ service-account-key.json
 
 # NOTE: data/*.jsonl and data/*.csv (the generated datasets, splits, and
 # evaluation results) are intentionally NOT ignored — they're committed
-# directly since this week has no DVC tracking requirement.
+# directly since this week has no DVC tracking requirement..env.local
