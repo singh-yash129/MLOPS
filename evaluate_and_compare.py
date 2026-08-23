@@ -64,7 +64,7 @@ def predict_vertex(endpoint_name: str, input_text: str, max_retries: int = 5) ->
 
     model = GenerativeModel(endpoint_name)
 
-    delay = 5
+    delay = 15
     for attempt in range(1, max_retries + 1):
         try:
             response = model.generate_content(input_text)
@@ -75,7 +75,7 @@ def predict_vertex(endpoint_name: str, input_text: str, max_retries: int = 5) ->
             print(f"  [429 quota hit] retrying in {delay}s "
                   f"(attempt {attempt}/{max_retries})...")
             time.sleep(delay)
-            delay *= 2  # exponential backoff: 5, 10, 20, 40, 80s
+            delay *= 2  # exponential backoff: 15, 30, 60, 120, 240s
 
 
 
@@ -148,8 +148,8 @@ def evaluate(test_path: str, version: str, endpoint_name: str, mock: bool, rng=N
             raw = mock_predict(true_species, version, rng)
         else:
             raw = predict_vertex(endpoint_name, input_text)
-            time.sleep(1)  # small pacing delay between calls to avoid
-                            # tripping per-minute quota limits
+            time.sleep(6)  # ~10 requests/minute pacing, well under typical
+                            # low-tier Vertex AI Gemini prediction quotas
 
         pred = extractor(raw)
 
