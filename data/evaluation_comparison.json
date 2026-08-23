@@ -1,0 +1,36 @@
+[
+  {
+    "version":"v1",
+    "n_total":30,
+    "n_compliant":0,
+    "format_compliance":0.0,
+    "accuracy":0.0,
+    "precision_per_class":{
+      "setosa":0.0,
+      "versicolor":0.0,
+      "virginica":0.0
+    },
+    "recall_per_class":{
+      "setosa":0.0,
+      "versicolor":0.0,
+      "virginica":0.0
+    }
+  },
+  {
+    "version":"v2",
+    "n_total":30,
+    "n_compliant":7,
+    "format_compliance":0.2333333333,
+    "accuracy":0.1,
+    "precision_per_class":{
+      "setosa":0.4285714286,
+      "versicolor":0.0,
+      "virginica":0.0
+    },
+    "recall_per_class":{
+      "setosa":0.3,
+      "versicolor":0.0,
+      "virginica":0.0
+    }
+  }
+]
