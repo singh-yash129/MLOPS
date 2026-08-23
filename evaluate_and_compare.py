@@ -156,6 +156,9 @@ def evaluate(test_path: str, version: str, endpoint_name: str, mock: bool, rng=N
         true_labels.append(true_species)
         pred_labels.append(pred)
 
+        if os.environ.get("EVAL_DEBUG"):
+            print(f"    [debug] true={true_species!r} | raw_output={raw!r} | parsed={pred!r}")
+
     n_total = len(true_labels)
     compliant_mask = [p is not None for p in pred_labels]
     n_compliant = sum(compliant_mask)
