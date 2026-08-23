@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+
+# GCP credentials — never commit these
+*.json
+!data/evaluation_comparison.json
+service-account-key.json
+
+# NOTE: data/*.jsonl and data/*.csv (the generated datasets, splits, and
+# evaluation results) are intentionally NOT ignored — they're committed
+# directly since this week has no DVC tracking requirement.
