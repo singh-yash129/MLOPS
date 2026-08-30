@@ -154,22 +154,20 @@ class GuardedPipeline:
         if self.mock:
             return "setosa" if self.version == "v1" else "This is Iris setosa."
         
-        import vertexai
-        from vertexai.generative_models import GenerativeModel
+        import time
         from google.api_core.exceptions import ResourceExhausted
+        from vertexai.generative_models import GenerativeModel
 
         model = GenerativeModel(self.endpoint_name)
         delay = 15
-
+        
         for attempt in range(1, max_retries + 1):
             try:
-                # MANDATORY PACING: 10 seconds between every request
-                time.sleep(10)
                 response = model.generate_content(input_text)
                 return response.text.strip()
             except ResourceExhausted:
                 if attempt == max_retries:
                     raise
-                print(f"\n  [429 Quota Hit] Vertex AI Rate Limit Reached. Retrying in {delay}s (Attempt {attempt}/{max_retries})...")
+                print(f"  [429 quota hit] retrying in {delay}s (attempt {attempt}/{max_retries})...")
                 time.sleep(delay)
-                delay *= 2  # Exponential backoff (15s, 30s, 60s...)
+                delay *= 2  # exponential backoff: 15, 30, 60, 120, 240s
