@@ -26,62 +26,59 @@ The pipeline intercepts and scans all data before it reaches the model and befor
 
 ## 🛡️ Key Features
 
-*   **Red-Team Evaluation:** Tests the pipeline against deliberate jailbreaks, instruction overrides, and context window extraction attempts.
-*   **Input Sanitization:** Validates that incoming requests conform to the expected IRIS feature schema (numerical keys for v1, natural language for v2) and blocks malicious keywords.
-*   **Output Filtering:** Scans model responses for sensitive fragments of the system prompt and ensures the final output strictly adheres to the required classification format.
-*   **Rate-Limit Handling:** Integrates a robust exponential backoff and proactive 6-15 second pacing strategy to gracefully handle Google Cloud Vertex AI `429 Resource Exhausted` quota limits without crashing.
+- **Red-Team Evaluation:** Tests the pipeline against deliberate jailbreaks, instruction overrides, and context window extraction attempts.
+- **Input Sanitization:** Validates that incoming requests conform to the expected IRIS feature schema (numerical keys for v1, natural language for v2) and blocks malicious keywords.
+- **Output Filtering:** Scans model responses for sensitive fragments of the system prompt and ensures the final output strictly adheres to the required classification format.
+- **Rate-Limit Handling:** Integrates a robust exponential backoff and proactive 6-15 second pacing strategy to gracefully handle Google Cloud Vertex AI `429 Resource Exhausted` quota limits without crashing.
 
 ## 🚀 Setup and Execution
 
 ### Prerequisites
-*   Google Cloud Platform (GCP) project with Vertex AI enabled.
-*   Fine-tuned Gemini endpoints from Week 10.
-*   Python 3.10+
+
+- Google Cloud Platform (GCP) project with Vertex AI enabled.
+- Fine-tuned Gemini endpoints from Week 10.
+- Python 3.10+
 
 ### Local Execution
+
 1. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 2. Authenticate with Google Cloud:
 
-```bash
-gcloud auth application-default login
-gcloud config set project <YOUR_PROJECT_ID>
-```
-
+   ```bash
+   gcloud auth application-default login
+   gcloud config set project <YOUR_PROJECT_ID>
+   ```
 
 3. Run the evaluation script:
+
    ```bash
    python evaluate_guarded_pipeline.py \
        --v1-endpoint projects/<PROJECT_NUMBER>/locations/us-central1/endpoints/<V1_ENDPOINT_ID> \
        --v2-endpoint projects/<PROJECT_NUMBER>/locations/us-central1/endpoints/<V2_ENDPOINT_ID>
-
-```
+   ```
 
 ## 🔄 CI/CD Automation
+
 This repository uses GitHub Actions for automated regression testing. The workflow authenticates to GCP using Workload Identity Federation (WIF).
 
 To run successfully, the following GitHub Secrets must be configured:
 
-WIF_PROVIDER
+- WIF_PROVIDER
+- WIF_SERVICE_ACCOUNT
+- GCP_PROJECT_ID
+- V1_ENDPOINT_NAME
+- V2_ENDPOINT_NAME
 
-WIF_SERVICE_ACCOUNT
+## 📊 Evaluation Metrics
 
-GCP_PROJECT_ID
+The pipeline automatically calculates and saves the following metrics to `data/governance_results.json`:
 
-V1_ENDPOINT_NAME
-
-V2_ENDPOINT_NAME
-
-  ## 📊 Evaluation Metrics
-  The pipeline automatically calculates and saves the following metrics to data/governance_results.json:
-
-  Injection Block Rate: The percentage of prompt injections successfully intercepted. (Target: ≥ 90%)
-
-  Leakage Block Rate: The percentage of leakage attempts successfully intercepted. (Target: ≥ 90%)
-
-  False Positive Rate: The percentage of legitimate, benign inputs incorrectly flagged by the guardrails. (Target: ≤ 5%)
-
-  Accuracy Delta: The difference in classification accuracy between the unguarded and guarded pipeline.
+- **Injection Block Rate:** The percentage of prompt injections successfully intercepted. (Target: ≥ 90%)
+- **Leakage Block Rate:** The percentage of leakage attempts successfully intercepted. (Target: ≥ 90%)
+- **False Positive Rate:** The percentage of legitimate, benign inputs incorrectly flagged by the guardrails. (Target: ≤ 5%)
+- **Accuracy Delta:** The difference in classification accuracy between the unguarded and guarded pipeline.
