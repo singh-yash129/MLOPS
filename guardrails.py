@@ -25,12 +25,9 @@ class InputGuardrail:
     def __init__(self):
         # Rule-based blocklist for direct & indirect prompt injection
         self.injection_patterns = [
-            r"(?i)\b(ignore|override|bypass|forget)\b.*?\b(instructions|rules|prompt)\b",
-            r"(?i)\b(you are now|act as|roleplay as)\b",
-            r"(?i)\b(system prompt|context window|training data)\b",
-            r"(?i)\b(repeat after me|echo back|print everything)\b",
-            r"(?i)\b(what is|calculate|solve|translate|say)\b",
-            r"(?i)SYSTEM OVERRIDE",
+            r"(?i)\b(ignore previous|system override|new task:)\b",
+            r"(?i)\b(you are now a|act as a|roleplay as)\b",
+            r"(?i)\b(write a poem|what is 2\+2)\b"
         ]
 
     def validate_structure(self, input_text: str, version: str) -> Tuple[bool, str]:
@@ -66,13 +63,9 @@ class InputGuardrail:
 class OutputGuardrail:
     """Task 4: Scans model output for context leakage and format non-compliance."""
 
-    def __init__(self):
-        # Leakage indicators (fragments of system prompts, chat schemas, training examples)
-        self.leakage_patterns = [
-            r"(?i)\b(system prompt|context window|instructions given|training dataset)\b",
-            r"(?i)\b(contents|role|parts|user|model)\b",
-            r"(?i)\b(identify the iris species|flower specimen has a sepal)\b",
-            r"(?i)\b(format|rules|constraints)\b"
+    self.leakage_patterns = [
+            r"(?i)\b(system prompt|context window|instructions given|training dataset|training examples)\b",
+            r"(?i)\b(formatting constraints|contents of your)\b"
         ]
 
     def extract_and_validate_format(self, raw_output: str, version: str) -> Optional[str]:
