@@ -150,11 +150,27 @@ class GuardedPipeline:
             "response": output_check["safe_response"],
         }
 
-    def _call_model(self, input_text: str) -> str:
+    def _call_model(self, input_text: str, max_retries: int = 5) -> str:
         if self.mock:
             return "setosa" if self.version == "v1" else "This is Iris setosa."
+        
         import vertexai
         from vertexai.generative_models import GenerativeModel
+        from google.api_core.exceptions import ResourceExhausted
+        import time
+
         model = GenerativeModel(self.endpoint_name)
-        response = model.generate_content(input_text)
-        return response.text.strip()
+        delay = 15
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                # Add a 6-second pacing sleep between requests to stay under quota
+                time.sleep(6) 
+                response = model.generate_content(input_text)
+                return response.text.strip()
+            except ResourceExhausted:
+                if attempt == max_retries:
+                    raise
+                print(f"  [429 quota hit] retrying in {delay}s (attempt {attempt}/{max_retries})...")
+                time.sleep(delay)
+                delay *= 2  # Double the wait time: 15s, 30s, 60s...
