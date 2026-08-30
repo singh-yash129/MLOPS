@@ -1,0 +1,28 @@
+name: LLM Governance Security & Regression Test
+
+on:
+  push:
+    branches: [ week_11 ]
+  pull_request:
+    branches: [ week_11 ]
+
+jobs:
+  governance-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas scikit-learn pytest
+
+      - name: Run Guardrail Security Suite
+        run: |
+          python evaluate_guarded_pipeline.py --mock
