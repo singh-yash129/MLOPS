@@ -154,15 +154,18 @@ class GuardedPipeline:
         if self.mock:
             return "setosa" if self.version == "v1" else "This is Iris setosa."
         
-        import time
-        from google.api_core.exceptions import ResourceExhausted
+        import vertexai
         from vertexai.generative_models import GenerativeModel
+        from google.api_core.exceptions import ResourceExhausted
+        import time
 
         model = GenerativeModel(self.endpoint_name)
         delay = 15
-        
+
         for attempt in range(1, max_retries + 1):
             try:
+                # Bulletproof pacing: Wait 15 seconds before every request (~4 requests/minute)
+                time.sleep(15)
                 response = model.generate_content(input_text)
                 return response.text.strip()
             except ResourceExhausted:
@@ -170,4 +173,4 @@ class GuardedPipeline:
                     raise
                 print(f"  [429 quota hit] retrying in {delay}s (attempt {attempt}/{max_retries})...")
                 time.sleep(delay)
-                delay *= 2  # exponential backoff: 15, 30, 60, 120, 240s
+                delay *= 2
