@@ -63,7 +63,9 @@ class InputGuardrail:
 class OutputGuardrail:
     """Task 4: Scans model output for context leakage and format non-compliance."""
 
-    self.leakage_patterns = [
+    def __init__(self):
+        # Leakage indicators (fragments of system prompts, chat schemas, training examples)
+        self.leakage_patterns = [
             r"(?i)\b(system prompt|context window|instructions given|training dataset|training examples)\b",
             r"(?i)\b(formatting constraints|contents of your)\b"
         ]

@@ -1,80 +1,87 @@
-# Week 10 — From MLOps to LLMOps: Fine-Tuning Gemini on the IRIS Pipeline
+# Week 11 - Governing the Fine-Tuned LLM Guardrails on the IRIS Pipeline (Branch: `week_11`)
 
-Branch: `week_10`
+This repository contains the implementation of LLM-specific governance controls—specifically **Input and Output Guardrails**—designed to protect a fine-tuned Gemini model against prompt injection and context leakage attacks. 
 
-## Setup (run in GCP Cloud Shell, after cloning this repo)
+It extends the traditional ML pipeline built in Week 10 by introducing MLSecOps practices tailored to the unique threat surface of Large Language Models.
 
-```bash
-git checkout week_10
-pip install -r requirements.txt
+## 🏗️ Architecture & Pipeline Flow
 
-gcloud config set project <PROJECT_ID>
-gcloud services enable aiplatform.googleapis.com storage.googleapis.com
-```
+The pipeline intercepts and scans all data before it reaches the model and before it is returned to the user:
 
-## Run all tasks in order
+1. **User Input** ➔ 
+2. **Input Guardrail** (Intercepts prompt injection & schema violations) ➔ 
+3. **Fine-Tuned Gemini Model** (Vertex AI Endpoint) ➔ 
+4. **Output Guardrail** (Filters context leakage & format violations) ➔ 
+5. **Safe Response**
 
-```bash
-# Task 1 — v1 raw feature JSONL
-python3 prepare_v1_raw.py
-
-# Task 2 — v2 natural language description JSONL (reuses v1's train/test split)
-python3 prepare_v2_description.py
-
-# Upload both datasets to GCS
-gsutil mb -l us-central1 gs://<BUCKET_NAME>
-gsutil cp data/iris_v1_raw_train.jsonl gs://<BUCKET_NAME>/llmops/
-gsutil cp data/iris_v2_description_train.jsonl gs://<BUCKET_NAME>/llmops/
-
-# Task 3 — submit both fine-tuning jobs (edit PROJECT_ID/BUCKET at top of the file first)
-python3 finetune_vertex.py
-
-# Task 4 — evaluate both tuned models once jobs complete
-python3 evaluate_and_compare.py \
-  --v1-endpoint <V1_ENDPOINT_NAME> \
-  --v2-endpoint <V2_ENDPOINT_NAME>
-
-# Dry-run the evaluation logic without a live endpoint (sanity check only):
-python3 evaluate_and_compare.py --mock
-```
-
-Task 5 (optional) — `ci-llm-eval.yml` extends GitHub Actions to run evaluation
-automatically on push and fail the build if either model's accuracy drops
-below the threshold set in the workflow.
-
-## Files
+## 📂 Repository Structure
 
 | File | Purpose |
-|---|---|
-| `prepare_v1_raw.py` | Task 1 — raw feature JSONL, fixed train/test split |
-| `prepare_v2_description.py` | Task 2 — natural language JSONL, same split as v1 |
-| `finetune_vertex.py` | Task 3 — submits both Vertex AI fine-tuning jobs |
-| `evaluate_and_compare.py` | Task 4 — accuracy, per-class precision/recall, format compliance |
-| `ci-llm-eval.yml` | Task 5 (optional) — CI regression guard on push |
+| :--- | :--- |
+| `guardrails.py` | Contains the `InputGuardrail`, `OutputGuardrail`, and `GuardedPipeline` classes. Implements regex pattern matching, structural schema validation, and exponential backoff for Vertex AI rate limits. |
+| `red_team_suite.py` | Defines the adversarial datasets, containing 5 distinct prompt injection attacks and 5 prompt leakage probes used to red-team the pipeline. |
+| `evaluate_guarded_pipeline.py` | The main evaluation script. It runs both adversarial and legitimate test sets through the guarded pipeline and computes block rates, false positive rates, and accuracy deltas. |
+| `.github/workflows/ci-llm-governance.yml` | CI/CD automation that runs the evaluation script on every push. It enforces strict security thresholds (e.g., >90% block rate) and fails the build if the model regresses. |
+| `data/` | Directory containing the legitimate test datasets from Week 10 (`iris_v1_raw_test.jsonl`, etc.) and the generated `governance_results.json` metrics. |
 
-## Generated output
+## 🛡️ Key Features
+
+*   **Red-Team Evaluation:** Tests the pipeline against deliberate jailbreaks, instruction overrides, and context window extraction attempts.
+*   **Input Sanitization:** Validates that incoming requests conform to the expected IRIS feature schema (numerical keys for v1, natural language for v2) and blocks malicious keywords.
+*   **Output Filtering:** Scans model responses for sensitive fragments of the system prompt and ensures the final output strictly adheres to the required classification format.
+*   **Rate-Limit Handling:** Integrates a robust exponential backoff and proactive 6-15 second pacing strategy to gracefully handle Google Cloud Vertex AI `429 Resource Exhausted` quota limits without crashing.
+
+## 🚀 Setup and Execution
+
+### Prerequisites
+*   Google Cloud Platform (GCP) project with Vertex AI enabled.
+*   Fine-tuned Gemini endpoints from Week 10.
+*   Python 3.10+
+
+### Local Execution
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Authenticate with Google Cloud:
+
+```bash
+gcloud auth application-default login
+gcloud config set project <YOUR_PROJECT_ID>
+```
+
+
+3. Run the evaluation script:
+   ```bash
+   python evaluate_guarded_pipeline.py \
+       --v1-endpoint projects/<PROJECT_NUMBER>/locations/us-central1/endpoints/<V1_ENDPOINT_ID> \
+       --v2-endpoint projects/<PROJECT_NUMBER>/locations/us-central1/endpoints/<V2_ENDPOINT_ID>
 
 ```
-data/
-  iris_v1_raw_train.jsonl
-  iris_v1_raw_test.jsonl
-  iris_v2_description_train.jsonl
-  iris_v2_description_test.jsonl
-  split_train_idx.csv
-  split_test_idx.csv
-  evaluation_comparison.json
-```
 
-## Notes on verification
+## 🔄 CI/CD Automation
+This repository uses GitHub Actions for automated regression testing. The workflow authenticates to GCP using Workload Identity Federation (WIF).
 
-`prepare_v1_raw.py` and `prepare_v2_description.py` were run and verified locally —
-120 train / 30 test records each, confirmed both versions map to identical
-underlying rows. `evaluate_and_compare.py`'s metric logic was verified using
-`--mock` mode. `finetune_vertex.py` requires a real GCP project with billing
-and Vertex AI quota — it cannot be run outside GCP.
+To run successfully, the following GitHub Secrets must be configured:
 
-## Submission
+WIF_PROVIDER
 
-```
-<IITM_BS_ID>Assignment10<TERM><YEAR>_MLOps.<File_Type>
-```
+WIF_SERVICE_ACCOUNT
+
+GCP_PROJECT_ID
+
+V1_ENDPOINT_NAME
+
+V2_ENDPOINT_NAME
+
+  ## 📊 Evaluation Metrics
+  The pipeline automatically calculates and saves the following metrics to data/governance_results.json:
+
+  Injection Block Rate: The percentage of prompt injections successfully intercepted. (Target: ≥ 90%)
+
+  Leakage Block Rate: The percentage of leakage attempts successfully intercepted. (Target: ≥ 90%)
+
+  False Positive Rate: The percentage of legitimate, benign inputs incorrectly flagged by the guardrails. (Target: ≤ 5%)
+
+  Accuracy Delta: The difference in classification accuracy between the unguarded and guarded pipeline.
