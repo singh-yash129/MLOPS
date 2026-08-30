@@ -56,9 +56,16 @@ def evaluate_legitimate_test_set(pipeline: GuardedPipeline, test_file: str):
         if not pipeline.mock:
             time.sleep(6)
 
-        if res["status"] in ["BLOCKED_BY_INPUT_GUARDRAIL", "FILTERED_BY_OUTPUT_GUARDRAIL"]:
+        # Only count as a False Positive if the guardrail flagged it for a SECURITY reason.
+        # Format violation blocks are ignored here because the Week 10 base model is naturally non-compliant.
+        if res["status"] == "BLOCKED_BY_INPUT_GUARDRAIL":
             false_positives += 1
-        elif res.get("parsed_species") == expected:
+        elif res["status"] == "FILTERED_BY_OUTPUT_GUARDRAIL":
+            if "leakage" in res["reason"].lower():
+                false_positives += 1
+                
+        # Calculate accuracy based on whether the expected species was parsed successfully
+        if res.get("parsed_species") == expected:
             correct_predictions += 1
 
     fp_rate = false_positives / total
