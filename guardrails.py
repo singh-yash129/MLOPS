@@ -5,6 +5,7 @@ guardrails.py - Input and Output Guardrail System for IRIS Fine-Tuned LLM Pipeli
 import json
 import logging
 import re
+import time
 from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
@@ -18,7 +19,6 @@ logger = logging.getLogger("LLM_Governance")
 
 VALID_SPECIES = ["setosa", "versicolor", "virginica"]
 
-
 class InputGuardrail:
     """Task 3: Intercepts adversarial prompts and structural schema violations."""
 
@@ -30,19 +30,20 @@ class InputGuardrail:
             r"(?i)\b(system prompt|context window|training data)\b",
             r"(?i)\b(repeat after me|echo back|print everything)\b",
             r"(?i)\b(what is|calculate|solve|translate|say)\b",
+            r"(?i)SYSTEM OVERRIDE",
         ]
 
     def validate_structure(self, input_text: str, version: str) -> Tuple[bool, str]:
         """Validates input against expected IRIS feature schemas."""
         if version == "v1":
             # Expects numerical key-value structure
-            pattern = r"^sepal_length:\s*[\d\.]+,\s*sepal_width:\s*[\d\.]+,\s*petal_length:\s*[\d\.]+,\s*petal_width:\s*[\d\.]+$"
-            if not re.match(pattern, input_text.strip()):
+            pattern = r"^sepal_length:\s*[\d\.]+,\s*sepal_width:\s*[\d\.]+,\s*petal_length:\s*[\d\.]+,\s*petal_width:\s*[\d\.]+"
+            if not re.search(pattern, input_text.strip()):
                 return False, "Input violates v1 raw feature schema format."
         elif version == "v2":
             # Expects natural language description template
-            pattern = r"^A flower specimen has a sepal length of [\d\.]+ cm, sepal width of [\d\.]+ cm, petal length of [\d\.]+ cm, and petal width of [\d\.]+ cm\. Identify the iris species\.$"
-            if not re.match(pattern, input_text.strip()):
+            pattern = r"A flower specimen has a sepal length of [\d\.]+ cm, sepal width of [\d\.]+ cm, petal length of [\d\.]+ cm, and petal width of [\d\.]+ cm\. Identify the iris species\."
+            if not re.search(pattern, input_text.strip()):
                 return False, "Input violates v2 description schema format."
         return True, ""
 
@@ -62,7 +63,6 @@ class InputGuardrail:
 
         return {"blocked": False}
 
-
 class OutputGuardrail:
     """Task 4: Scans model output for context leakage and format non-compliance."""
 
@@ -72,6 +72,7 @@ class OutputGuardrail:
             r"(?i)\b(system prompt|context window|instructions given|training dataset)\b",
             r"(?i)\b(contents|role|parts|user|model)\b",
             r"(?i)\b(identify the iris species|flower specimen has a sepal)\b",
+            r"(?i)\b(format|rules|constraints)\b"
         ]
 
     def extract_and_validate_format(self, raw_output: str, version: str) -> Optional[str]:
@@ -112,7 +113,6 @@ class OutputGuardrail:
             }
 
         return {"blocked": False, "parsed_output": parsed_species, "safe_response": raw_output}
-
 
 class GuardedPipeline:
     """Wraps Vertex AI model prediction with input and output governance controls."""
@@ -157,20 +157,19 @@ class GuardedPipeline:
         import vertexai
         from vertexai.generative_models import GenerativeModel
         from google.api_core.exceptions import ResourceExhausted
-        import time
 
         model = GenerativeModel(self.endpoint_name)
         delay = 15
 
         for attempt in range(1, max_retries + 1):
             try:
-                # Add a 6-second pacing sleep between requests to stay under quota
-                time.sleep(6) 
+                # MANDATORY PACING: 10 seconds between every request
+                time.sleep(10)
                 response = model.generate_content(input_text)
                 return response.text.strip()
             except ResourceExhausted:
                 if attempt == max_retries:
                     raise
-                print(f"  [429 quota hit] retrying in {delay}s (attempt {attempt}/{max_retries})...")
+                print(f"\n  [429 Quota Hit] Vertex AI Rate Limit Reached. Retrying in {delay}s (Attempt {attempt}/{max_retries})...")
                 time.sleep(delay)
-                delay *= 2  # Double the wait time: 15s, 30s, 60s...
+                delay *= 2  # Exponential backoff (15s, 30s, 60s...)
